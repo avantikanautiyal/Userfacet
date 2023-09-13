@@ -1,1 +1,91 @@
+django-admin startproject survey_similarity_project1
+cd survey_similarity_project1
+python manage.py startapp survey_similarity1
+from django.db import models
 
+class Survey1(models.Model):
+    select question
+    select responses
+    
+
+class Candidate1(models.Model):
+    names = models.CharField(max_length=255)
+
+class Response1(models.Model):
+    survey1 = models.ForeignKey(Survey, on_delete=models.CASCADE)
+    candidate1 = models.ForeignKey(Candidate, on_delete=models.CASCADE)
+    responses1 = models.JSONField()
+
+
+from rest_framework import serializers
+from .models import Survey, Candidate, Response
+
+class SurveySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Survey1
+        fields = '__all__'
+
+class CandidateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Candidate1
+        fields = '__all__'
+
+class ResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Response1
+        fields = '__all__'
+
+
+from rest_framework import generics
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Survey, Candidate, Response
+from .serializers import SurveySerializer, CandidateSerializer, ResponseSerializer
+
+class SurveyList(generics.ListCreateAPIView):
+    queryset = Survey1.objects.all()
+    serializer_class = SurveySerializer
+
+class CandidateList(generics.ListCreateAPIView):
+    queryset = Candidate1.objects.all()
+    serializer_class = CandidateSerializer
+
+class ResponseList(generics.ListCreateAPIView):
+    queryset = Response1.objects.all()
+    serializer_class = ResponseSerializer
+
+class ResponseFilter(filters.FilterSet):
+    class Meta:
+        model = Response1
+        fields = ['candidate__name', 'survey__name']
+
+class ResponseFilterView(generics.ListAPIView):
+    queryset = Response1.objects.all()
+    serializer_class = ResponseSerializer
+    filter_backends = (filters.OrderingFilter, DjangoFilterBackend)
+    filter_class = ResponseFilter
+    ordering_fields = ('candidate__name',)
+
+from django.urls import path
+from .views import SurveyList, CandidateList, ResponseList, ResponseFilterView
+
+urlpatterns = [
+    path('surveys/', SurveyList.as_view(), name='survey-list'),
+    path('candidates/', CandidateList.as_view(), name='candidate-list'),
+    path('responses/', ResponseList.as_view(), name='response-list'),
+    path('responses/filter/', ResponseFilterView.as_view(), name='response-filter'),
+]
+
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/', include('survey_similarity.urls')),
+]
+
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+
+python manage.py runserver
